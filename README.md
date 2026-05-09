@@ -49,6 +49,11 @@ Order AI Agent 是一個基於 LangChain 和 LangGraph 的智慧訂單管理代�
 
 圖中展示了各節點間的條件邊緣和路由邏輯，確保系統能夠智能地處理各種訂單管理場景。
 
+## Demo
+
+<img src="static/demo.png" alt="demo" width="500">
+
+
 ## 安裝說明
 
 ### 環境需求
