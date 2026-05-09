@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI 訂單管理助手</title>
+    <!-- 引入 Tailwind CSS 與 Google 字體 -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <style>
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background-color: #e2e8f0; border-radius: 10px; }
+    </style>
+</head>
+<body class="bg-gray-50 h-screen flex flex-col">
+
+    <!-- 頂部導航列 -->
+    <nav class="bg-white shadow-sm border-b px-6 py-3 flex justify-between items-center">
+        <div class="flex items-center space-x-2">
+            <span class="material-icons text-blue-600">smart_toy</span>
+            <span class="font-bold text-xl text-gray-800">Order AI Agent</span>
+        </div>
+        <div class="text-sm text-gray-500">GCP Cloud Run Deployed</div>
+    </nav>
+
+    <main class="flex-1 flex overflow-hidden">
+        
+        <!-- 左側：對話區域 -->
+        <div class="w-1/2 flex flex-col border-r bg-white">
+            <div id="messages" class="flex-1 overflow-y-auto p-6 space-y-4 custom-scrollbar">
+                <!-- 預設歡迎訊息 -->
+                <div class="flex items-start">
+                    <div class="bg-blue-100 text-blue-800 p-3 rounded-lg rounded-tl-none max-w-[80%] shadow-sm">
+                        您好！我是您的 AI 訂單助手，您可以詢問我關於訂單狀態、修改或查詢資料。
+                    </div>
+                </div>
+            </div>
+
+            <!-- 輸入框區域 -->
+            <div class="p-4 border-t bg-gray-50">
+                <div class="flex space-x-2 bg-white p-2 rounded-xl shadow-inner border">
+                    <input type="text" id="userInput" 
+                        class="flex-1 bg-transparent border-none focus:ring-0 px-2 py-1" 
+                        placeholder="請輸入指令... 例如：查詢訂單 ORD001"
+                        onkeypress="if(event.key === 'Enter') sendMessage()">
+                    <button onclick="sendMessage()" class="bg-blue-600 hover:bg-blue-700 text-white p-2 rounded-lg transition">
+                        <span class="material-icons text-sm">send</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 右側：資料庫監視器 -->
+        <div class="w-1/2 bg-slate-900 text-slate-300 p-6 overflow-hidden flex flex-col">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-sm font-semibold uppercase tracking-widest text-slate-500 flex items-center">
+                    <span class="material-icons text-xs mr-2">database</span> 即時資料庫快照
+                </h3>
+                <span class="text-xs bg-slate-800 px-2 py-1 rounded text-green-400 font-mono">LIVE</span>
+            </div>
+            <div class="flex-1 bg-slate-800 rounded-lg p-4 font-mono text-sm overflow-auto custom-scrollbar border border-slate-700">
+                <pre id="dbStatus" class="text-blue-300">{ "status": "waiting_for_first_query" }</pre>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        const msgContainer = document.getElementById('messages');
+        const dbDisplay = document.getElementById('dbStatus');
+
+        async function sendMessage() {
+            const input = document.getElementById('userInput');
+            const message = input.value.trim();
+            if (!message) return;
+
+            // 1. 顯示使用者訊息 (右側)
+            appendMessage('user', message);
+            input.value = '';
+
+            // 2. 顯示 Loading 狀態
+            const loadingId = 'loading-' + Date.now();
+            appendMessage('assistant', '正在思考中...', loadingId);
+
+            try {
+                const response = await fetch('/chat', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        message: message, 
+                        session_id: 'demo-session-' + window.location.hostname
+                    })
+                });
+
+                const data = await response.json();
+                
+                // 3. 移除 Loading 並替換為真實回覆
+                document.getElementById(loadingId).innerText = data.answer;
+                
+                // 4. 更新資料庫 JSON 
+                dbDisplay.innerText = JSON.stringify(data.current_db, null, 2);
+                dbDisplay.className = "text-green-400 transition duration-500";
+                setTimeout(() => dbDisplay.className = "text-blue-300", 1000);
+
+            } catch (err) {
+                document.getElementById(loadingId).innerText = "發生錯誤，請稍後再試。";
+                console.error(err);
+            }
+        }
+
+        function appendMessage(role, text, id = null) {
+            const wrapper = document.createElement('div');
+            wrapper.className = role === 'user' ? 'flex items-start justify-end' : 'flex items-start';
+            
+            const contentClass = role === 'user' 
+                ? 'bg-blue-600 text-white rounded-tr-none' 
+                : 'bg-gray-100 text-gray-800 rounded-tl-none';
+
+            wrapper.innerHTML = `
+                <div id="${id || ''}" class="${contentClass} p-3 rounded-lg max-w-[80%] shadow-sm animate-fade-in-up">
+                    ${text}
+                </div>
+            `;
+            msgContainer.appendChild(wrapper);
+            msgContainer.scrollTop = msgContainer.scrollHeight;
+        }
+    </script>
+
+    <style>
+        @keyframes fade-in-up {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fade-in-up { animation: fade-in-up 0.3s ease-out forwards; }
+    </style>
+</body>
+</html>
