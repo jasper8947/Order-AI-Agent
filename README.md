@@ -129,8 +129,7 @@ order-manager-ai/
 ├── graph/                  # LangGraph 工作流程
 │   ├── workflow.py         # 主要工作流程
 │   ├── state.py            # 狀態定義
-│   ├── nodes.py            # 圖節點
-│   └── router.py           # 路由邏輯
+│   └── nodes.py            # 圖節點
 ├── static/                 # 靜態資源
 │   └── index.html          # 網頁介面
 └── tools/                  # 工具函數
